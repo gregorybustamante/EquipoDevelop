@@ -1,0 +1,188 @@
+SET TIMEZONE='America/Caracas';
+SET datestyle = "ISO, DMY";
+
+
+--CREAR TABLAS
+
+
+--Tabla Representante
+CREATE TABLE fa_repre(
+
+	id_repre		varchar(15)	NOT NULL,
+	nombre_repre		varchar(50)	NOT NULL,
+	apellido_repre		varchar(50)	NOT NULL,
+
+	CONSTRAINT		pk_repre			PRIMARY KEY	(id_repre)
+);
+
+
+--Tabla Telefono
+CREATE TABLE fa_tlf(
+
+	id_tlf			numeric(4)	NOT NULL,
+	num_tlf			numeric(12),
+
+	CONSTRAINT		pk_tlf			PRIMARY KEY	(id_tlf)
+);
+
+
+--Tabla Correo
+CREATE TABLE fa_correo(
+
+	id_correo		numeric(4)	NOT NULL,
+	num_correo		varchar(50),
+
+	CONSTRAINT		pk_correo			PRIMARY KEY	(id_correo)
+);
+
+
+--Tabla Zona
+CREATE TABLE fa_zona(
+
+	id_zona			numeric(4)	NOT NULL,
+	zona			varchar(50),
+	unidad_educativa	varchar(50),
+
+	CONSTRAINT		pk_zona			PRIMARY KEY	(id_zona)
+);
+
+
+--Tabla Paciente
+CREATE TABLE fa_paciente(
+
+	id_paciente		serial		NOT NULL,
+	cedula			varchar(15),
+	nombre_paciente		varchar(50)	NOT NULL,
+	apellido_paciente	varchar(50)	NOT NULL,
+	fecha_naci_paciente	date		NOT NULL,
+	sexo			varchar(1)	NOT NULL,
+	cod_tlf			numeric(4),
+	cod_correo		numeric(4),
+	cod_zona		numeric(4),
+	cod_repre		varchar(15),
+	
+	CONSTRAINT		fk_tlf				FOREIGN KEY	(cod_tlf)		REFERENCES	fa_tlf (id_tlf),
+	CONSTRAINT		fk_correo			FOREIGN KEY	(cod_correo)		REFERENCES	fa_correo (id_correo),
+	CONSTRAINT		fk_zona				FOREIGN KEY	(cod_zona)		REFERENCES	fa_zona (id_zona),
+	CONSTRAINT		fk_repre			FOREIGN KEY	(cod_repre)		REFERENCES	fa_repre (id_repre),
+	CONSTRAINT		pk_paciente			PRIMARY KEY	(id_paciente)
+);
+ALTER TABLE fa_paciente ADD CONSTRAINT check_sexo CHECK(sexo IN('F', 'M'));
+
+
+--Tabla Tabla_Diagnostico
+CREATE TABLE fa_tabla_diag(
+
+	id_tabla_diag			serial		NOT NULL,
+	sexo_diag			varchar(1)	NOT NULL,
+	peso_imc_ganancia		varchar(22)	NOT NULL,
+	unidad_peso_imc_ganancia	varchar(22)	NOT NULL,
+	edad_talla_semana		varchar(22)	NOT NULL,
+	unidad_edad_talla_semana	varchar(22)	NOT NULL,
+	cant_edad_talla_semana		numeric(4,1)	NOT NULL,
+	min_normal_peso_imc_ganancia	numeric(4,1)	NOT NULL,
+	max_normal_peso_imc_ganancia	numeric(4,1)	NOT NULL,
+	
+	CONSTRAINT		pk_tabla_diag			PRIMARY KEY	(id_tabla_diag)
+);
+ALTER TABLE fa_tabla_diag ADD CONSTRAINT check_sexodiag CHECK(sexo_diag IN('F', 'M'));
+ALTER TABLE fa_tabla_diag ADD CONSTRAINT check_pig CHECK(peso_imc_ganancia IN('PESO', 'IMC', 'GANANCIA'));
+ALTER TABLE fa_tabla_diag ADD CONSTRAINT check_upig CHECK(unidad_peso_imc_ganancia IN('KG', 'KG/M2'));
+ALTER TABLE fa_tabla_diag ADD CONSTRAINT check_ets CHECK(edad_talla_semana IN('EDAD', 'TALLA', 'SEMANAS DE GESTACION', ' '));
+ALTER TABLE fa_tabla_diag ADD CONSTRAINT check_uets CHECK(unidad_edad_talla_semana IN('MESES', 'AÑOS', 'CM', 'SEMANAS DE GESTACION', ' '));
+
+
+--Tabla Empleado
+CREATE TABLE fa_empleado(
+	id_empleado		serial		NOT NULL	UNIQUE, 
+	cargo			varchar(15)	NOT NULL, 
+	nombre_emp		varchar(50)	NOT NULL, 
+	apellido_emp		varchar(50)	NOT NULL,
+	fecha_naci_emp		date 		NOT NULL,
+	activo			boolean		NOT NULL
+);
+ALTER TABLE fa_empleado ADD CONSTRAINT check_cargo CHECK(cargo IN('ENFERMERA', 'ENFERMERO', 'JEFE', 'JEFA'));
+
+--Tabla Acceso
+CREATE TABLE fa_acceso(
+	cod_empleado		serial 		NOT NULL,
+	username			varchar(15)	NOT NULL	UNIQUE,
+	passw		varchar(25)	NOT NULL,
+
+	CONSTRAINT		fk_empleado			FOREIGN KEY	(cod_empleado)			REFERENCES	fa_empleado (id_empleado),
+	CONSTRAINT		pk_acceso			PRIMARY KEY	(cod_empleado, username)
+);
+
+
+--Tabla Diagnostico
+CREATE TABLE fa_diagnostico(
+	id_diag			serial		PRIMARY KEY,
+	fecha_diagnostico	date	NOT NULL,
+	cod_paciente		integer	NOT NULL,
+	cod_tabla_diag		serial		NOT NULL,
+	cod_emp			serial		NOT NULL,
+	edad_cronologica	numeric(4,1)	NOT NULL,
+	peso			numeric(4,1)	NOT NULL,
+	nombre_diag		varchar(30)	NOT NULL,
+	altura			numeric(4,1)	NOT NULL,
+	circun_brazo		numeric(4,1),
+	circun_abdomen		numeric(4,1),
+	semanas_gestacion	numeric(2),
+	imc			numeric(4,1),
+	diagnostico		varchar(30)	NOT NULL,
+	notas			varchar(240),
+
+	CONSTRAINT		fk_paciente				FOREIGN KEY	(cod_paciente)			REFERENCES	fa_paciente (id_paciente),
+	CONSTRAINT		fk_tabla_diag				FOREIGN KEY	(cod_tabla_diag)		REFERENCES	fa_tabla_diag (id_tabla_diag),
+	CONSTRAINT		fk_emp					FOREIGN KEY	(cod_emp)			REFERENCES	fa_empleado (id_empleado)
+);
+ALTER TABLE fa_diagnostico ADD CONSTRAINT check_nombre_diag CHECK(nombre_diag IN('IMC', 'PESO/EDAD', 'PESO/TALLA', 'GANANCIA DE PESO', 'CIRCUNFERENCIA BRAZO IZQ'));
+ALTER TABLE fa_diagnostico ADD CONSTRAINT check_diagnostico CHECK(diagnostico IN('DEFICIT', 'NORMOPESO', 'SOBREPESO'));
+
+
+
+CREATE SEQUENCE fa_corr
+increment by 1
+start with 1;
+
+CREATE SEQUENCE fa_tlff
+increment by 1
+start with 1;
+
+CREATE SEQUENCE fa_zon
+increment by 1
+start with 1;
+
+
+
+CREATE or REPLACE VIEW ult_diag AS
+SELECT cod_paciente, MAX(fecha_diagnostico), diagnostico--, COUNT(*)
+    FROM fa_diagnostico
+--WHERE diagnostico='NORMOPESO'
+    GROUP BY diagnostico, cod_paciente
+    ORDER BY cod_paciente;
+
+
+
+CREATE OR REPLACE FUNCTION months_between (date, date) RETURNS NUMERIC AS
+$body$
+DECLARE
+mes FLOAT;
+mes1 NUMERIC;
+ano FLOAT;
+dia FLOAT;
+begin
+mes=extract(month from (age($1,$2)));
+ano=extract(year from (age($1,$2)));
+dia=extract(day from (age($1,$2)));
+mes1=(ano*12) + mes + cast(dia as real)/31;
+mes1= round(mes1,7);
+return mes1;
+end
+$body$
+LANGUAGE 'plpgsql' VOLATILE CALLED ON NULL INPUT SECURITY INVOKER;
+
+
+
+
+
